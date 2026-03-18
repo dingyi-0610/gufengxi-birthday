@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>顾凤溪 25岁生日快乐 (Miku Ver.)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+        
+        :root {
+            --miku-teal: #39C5BB;
+            --miku-pink: #FF6699;
+            --miku-black: #333333;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f0fdfa, #ccfbf1, #39C5BB);
+            font-family: 'PingFang SC', sans-serif;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            cursor: none;
+        }
+
+        .miku-font {
+            font-family: 'ZCOOL KuaiLe', cursive;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 50;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .score-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 40;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 15px;
+            border-left: 6px solid var(--miku-pink);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .miku-button {
+            background: var(--miku-teal);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.5rem;
+            box-shadow: 0 10px 0 #2a948d;
+            transition: all 0.1s;
+        }
+
+        .miku-button:active {
+            transform: translateY(5px);
+            box-shadow: 0 5px 0 #2a948d;
+        }
+
+        /* Float animation for decorative items */
+        .floating-icon {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .dading-badge {
+            color: var(--miku-pink);
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- UI Layer -->
+    <div class="score-panel miku-font">
+        <div class="text-gray-600 text-sm">生日同步率</div>
+        <div class="text-3xl text-teal-600"><span id="score">0</span> / 25</div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="overlay">
+        <div class="text-6xl mb-6 floating-icon">🥬🎵</div>
+        <h1 class="text-5xl md:text-7xl text-teal-600 miku-font mb-4">顾凤溪</h1>
+        <h2 class="text-2xl text-pink-500 miku-font mb-8">25岁生日快乐 Live!</h2>
+        <div class="space-y-2 text-gray-700 mb-10 max-w-sm">
+            <p>🎵 收集音符和大葱获得 1 分</p>
+            <p class="dading-badge">⭐ 收集“大丁”获得 2 分！</p>
+            <p>移动 Miku 收集盒，达到 25 分解锁惊喜</p>
+        </div>
+        <button id="start-btn" class="miku-button miku-font">开启演唱会</button>
+    </div>
+
+    <!-- Success Screen -->
+    <div id="success-screen" class="overlay hidden">
+        <div class="text-8xl mb-6">🎂</div>
+        <h1 class="text-5xl md:text-6xl text-teal-600 miku-font mb-4">Live 完美成功！</h1>
+        <h2 class="text-2xl text-pink-500 miku-font mb-8">凤溪，25岁生日快乐！</h2>
+        <div class="bg-white border-2 border-teal-400 p-8 rounded-3xl max-w-md shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-4 -left-4 text-4xl opacity-20">♪</div>
+            <div class="absolute -bottom-4 -right-4 text-4xl opacity-20">♪</div>
+            <p class="text-gray-700 text-lg leading-relaxed relative z-10 italic">
+                “你是世界第一的公主殿下，<br>
+                也是我生命中最动人的旋律。<br>
+                25岁的这一站，我会一直陪着你。”
+            </p>
+        </div>
+        <div class="mt-10 text-teal-600 font-bold">你的头号粉丝大丁</div>
+        <button onclick="location.reload()" class="mt-6 text-gray-400 underline">重新开场</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const startScreen = document.getElementById('start-screen');
+    const successScreen = document.getElementById('success-screen');
+    const startBtn = document.getElementById('start-btn');
+
+    let score = 0;
+    let gameActive = false;
+    let items = [];
+    let particles = [];
+    
+    const player = {
+        x: window.innerWidth / 2,
+        y: window.innerHeight - 120,
+        w: 100,
+        h: 70,
+        targetX: window.innerWidth / 2
+    };
+
+    // Item definitions
+    const itemPool = [
+        { char: '🥬', type: 'normal' },
+        { char: '🎵', type: 'normal' },
+        { char: '🎶', type: 'normal' },
+        { char: '🎂', type: 'normal' },
+        { char: '⭐', type: 'normal' },
+        { char: '大丁', type: 'special' } // Special request
+    ];
+
+    function init() {
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Input Handling
+        const handleMove = (e) => {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            player.targetX = clientX;
+        };
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
+        
+        startBtn.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            gameActive = true;
+            gameLoop();
+        });
+    }
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        player.y = canvas.height - 120;
+    }
+
+    class Item {
+        constructor() {
+            const choice = Math.random() < 0.15 ? itemPool[5] : itemPool[Math.floor(Math.random() * 5)];
+            this.char = choice.char;
+            this.type = choice.type;
+            this.x = Math.random() * (canvas.width - 60) + 30;
+            this.y = -50;
+            this.speed = 3 + Math.random() * 4;
+            this.rotation = Math.random() * Math.PI * 2;
+            this.rotSpeed = (Math.random() - 0.5) * 0.1;
+            this.size = this.type === 'special' ? 40 : 30 + Math.random() * 20;
+        }
+
+        update() {
+            this.y += this.speed;
+            this.rotation += this.rotSpeed;
+
+            // Collision check
+            if (this.y + this.size/2 > player.y && 
+                this.y - this.size/2 < player.y + player.h &&
+                this.x + this.size/2 > player.x - player.w/2 &&
+                this.x - this.size/2 < player.x + player.w/2) {
+                return 'collected';
+            }
+            return this.y > canvas.height + 50 ? 'missed' : 'active';
+        }
+
+        draw() {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.rotation);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            if (this.type === 'special') {
+                // Special Glow for Dading
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#FF6699';
+                ctx.fillStyle = '#FF6699';
+                ctx.font = 'bold 28px Arial';
+                ctx.fillText(this.char, 0, 0);
+            } else {
+                ctx.font = `${this.size}px Arial`;
+                ctx.fillText(this.char, 0, 0);
+            }
+            ctx.restore();
+        }
+    }
+
+    function createParticles(x, y, color) {
+        for (let i = 0; i < 15; i++) {
+            particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 1.0,
+                color: color || '#39C5BB'
+            });
+        }
+    }
+
+    function drawPlayer() {
+        // Smooth lerp for movement
+        player.x += (player.targetX - player.x) * 0.15;
+        const { x, y, w, h } = player;
+
+        ctx.save();
+        // Miku Box Style
+        ctx.fillStyle = '#333';
+        // Rounded Rect manually for older browsers if needed
+        ctx.beginPath();
+        const r = 10;
+        ctx.moveTo(x - w/2 + r, y);
+        ctx.lineTo(x + w/2 - r, y);
+        ctx.quadraticCurveTo(x + w/2, y, x + w/2, y + r);
+        ctx.lineTo(x + w/2, y + h - r);
+        ctx.quadraticCurveTo(x + w/2, y + h, x + w/2 - r, y + h);
+        ctx.lineTo(x - w/2 + r, y + h);
+        ctx.quadraticCurveTo(x - w/2, y + h, x - w/2, y + h - r);
+        ctx.lineTo(x - w/2, y + r);
+        ctx.quadraticCurveTo(x - w/2, y, x - w/2 + r, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Teal stripe
+        ctx.fillStyle = '#39C5BB';
+        ctx.fillRect(x - w/2, y + 10, w, 15);
+
+        // "01" Branding
+        ctx.fillStyle = '#FF6699';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('01', x - w/2 + 10, y + 45);
+        
+        // Ribbon decorations (Twin-tails)
+        ctx.strokeStyle = '#39C5BB';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x - w/2, y + 5);
+        ctx.quadraticCurveTo(x - w/2 - 30, y - 20, x - w/2 - 20, y + 40);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(x + w/2, y + 5);
+        ctx.quadraticCurveTo(x + w/2 + 30, y - 20, x + w/2 + 20, y + 40);
+        ctx.stroke();
+
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('给凤溪的爱', x, y + 58);
+        ctx.restore();
+    }
+
+    function drawConfetti() {
+        const colors = ['#39C5BB', '#FF6699', '#ffffff', '#000000'];
+        for(let i=0; i<100; i++) {
+            const div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.width = '10px';
+            div.style.height = '10px';
+            div.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            div.style.left = Math.random() * 100 + 'vw';
+            div.style.top = '-20px';
+            div.style.zIndex = '100';
+            document.body.appendChild(div);
+
+            div.animate([
+                { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+                { transform: `translateY(${window.innerHeight}px) translateX(${(Math.random()-0.5)*300}px) rotate(${Math.random()*720}deg)`, opacity: 0 }
+            ], {
+                duration: 2000 + Math.random() * 3000,
+                easing: 'cubic-bezier(0, .9, .57, 1)'
+            }).onfinish = () => div.remove();
+        }
+    }
+
+    function gameLoop() {
+        if (!gameActive) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Spawn logic
+        if (Math.random() < 0.04) items.push(new Item());
+
+        // Update items
+        for (let i = items.length - 1; i >= 0; i--) {
+            const item = items[i];
+            const state = item.update();
+            
+            if (state === 'collected') {
+                const points = item.type === 'special' ? 2 : 1;
+                score += points;
+                scoreEl.innerText = score;
+                createParticles(item.x, item.y, item.type === 'special' ? '#FF6699' : '#39C5BB');
+                items.splice(i, 1);
+                
+                if (score >= 25) {
+                    gameActive = false;
+                    successScreen.classList.remove('hidden');
+                    drawConfetti();
+                    setInterval(drawConfetti, 2500);
+                }
+            } else if (state === 'missed') {
+                items.splice(i, 1);
+            } else {
+                item.draw();
+            }
+        }
+
+        // Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.03;
+            if (p.life <= 0) {
+                particles.splice(i, 1);
+                continue;
+            }
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+
+        drawPlayer();
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
